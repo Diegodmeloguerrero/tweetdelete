@@ -1,83 +1,77 @@
-# Installing the X (Twitter) Auto Bulk Delete Userscript
+# X (Twitter) Auto Bulk Delete — Free Userscript
 
-This guide walks you through installing and setting up the `tweetdelete.user.js` script so it runs automatically on x.com / twitter.com.
+Automatically watch your tweet count on X (formerly Twitter) and, once it crosses a threshold, offer to bulk-delete your tweets, replies, and retweets. No app to install, no API key, no paid service — it runs entirely in your browser using your own logged-in session, so nothing ever leaves your machine.
 
-<!---
-> **⚠️ Set X's display language to English first.** The script reads your post count directly from the page text (e.g. `"733 posts"`), and while it recognizes a few locale variants, it's only reliably tested against English. Go to **X → Settings → Accessibility, display, and languages → Languages → Display language** and set it to **English** before continuing, otherwise the script may fail to detect your post count.
+Originally created by [backzso](https://github.com/backzso/tweetdelete); this fork continues it with a couple of bug fixes and behavior tweaks (see [Changes in this fork](#changes-in-this-fork)).
 
-> **⚠️ Keep the tab open and in the foreground.** The script scrolls the page and reads tweets out of the live DOM to work — most browsers throttle or unload background tabs, and X itself stops rendering new tweets into a tab that isn't visible. If you switch away or minimize the window mid-run, it'll typically just sit there waiting once the current batch's tweets run out, rather than actually erroring out — it won't stop on its own, and it'll pick back up once you bring the tab back to the front. It won't stop unless you either run `STOP_DELETE = true` in the console yourself or close the tab.
+⚠️ **Deletion is permanent and irreversible.** There is no undo, and no built-in backup step — if you want to keep a copy of anything before running this, save it yourself first.
 
-> **⚠️ This is a quick, hacky fix, not a polished tool.** It leans on X's undocumented internal API and some fragile DOM scraping (reading text labels to guess the post count, detecting reposts by a UI label, etc.), all of which can break the moment X changes something on their end. Expect bugs — things like stalling on legitimate tweets, mis-detecting a repost, or the count-reading regex missing an edge case are all realistic. Keep an eye on the console and the toast messages while it runs, and don't assume it did exactly what you expected without checking your profile afterward.
---->
+## Features
 
-## 1. Install [Tampermonkey](https://www.tampermonkey.net/)
+- 🗑️ Deletes tweets, replies, and retweets automatically once you confirm
+- 🆓 Completely free — no subscription, no third-party service
+- 🔒 Private — no login/password required beyond your existing X session, nothing leaves your browser
+- 🔁 Chains batches on its own after you confirm once, without re-prompting every time
+- ⏱️ Backs off automatically on rate limits, including a longer cooldown if X keeps rate-limiting in a row
 
-Tampermonkey is a browser extension that runs userscripts on pages you visit.
+## How it works
 
-1. Go to the extension store for your browser (Chrome Web Store, Firefox Add-ons, Edge Add-ons, etc.) and search for **Tampermonkey**.
-2. Click **Add to [Browser]** / **Install**, then confirm in the permissions popup.
-3. Once installed, you'll see the Tampermonkey icon (a black-and-white checkered dashboard icon) in your browser's toolbar.
+The script authenticates with the `ct0` CSRF cookie already present in your logged-in session and calls X's own GraphQL mutations — `DeleteTweet` and `DeleteRetweet` — the same endpoints the website itself uses. It scrolls your profile timeline and acts on whatever's currently rendered, so it only reaches tweets X is willing to load into the page — there's no archive/full-history mode.
 
-## 2. Open the Tampermonkey Dashboard
+## Usage
 
-1. Click the Tampermonkey icon in the toolbar.
-2. From the dropdown menu, select **Dashboard**.
+1. Install [Tampermonkey](https://www.tampermonkey.net/) or Violentmonkey.
+2. Add `tweetdelete.user.js` as a new script (see [`install-guide.md`](./install-guide.md) for a full step-by-step with a `THRESHOLD` explainer).
+3. Set your X display language to **English** — the script reads your post count from the page text and is only reliably tested against English.
+4. Go to your own profile, **Posts** tab first. The script detects your post count and asks whether to start deleting.
+5. Confirm once — it'll keep going batch after batch, then move on to the **Replies** tab the same way once you navigate there.
+6. Stop anytime by typing `STOP_DELETE = true` in the console.
 
-## 3. Create a New Script
+It never deletes silently — you always confirm before the first batch.
 
-1. In the Dashboard, click the **+** tab (or **Create a new script**) near the top.
-2. This opens Tampermonkey's built-in code editor with a default template already in it.
+## Keep the tab open and in the foreground
 
-## 4. Paste the Script
+The script scrolls the page and reads tweets out of the live DOM to work. If you switch away or minimize the window mid-run, X stops rendering new tweets into a tab that isn't visible, so it'll typically just sit there waiting rather than erroring out — it won't stop on its own, and picks back up once the tab is in front again. It only stops if you run `STOP_DELETE = true` yourself or close the tab.
 
-1. Select all the default template code in the editor (Ctrl+A / Cmd+A) and delete it.
-2. Paste the full contents of `tweetdelete.user.js` in its place.
-3. Save with **File → Save** or Ctrl+S / Cmd+S.
+## Configuration
 
-## 5. Confirm It's Enabled
+All options live at the top of `tweetdelete.user.js`:
 
-1. Back in the Dashboard's script list, find **X (Twitter) Auto Bulk Delete**.
-2. Make sure the toggle switch next to it is **on** (green).
+| Option | Default | Purpose |
+|---|---|---|
+| `THRESHOLD` | `0` | Minimum post count that triggers the prompt. `0` offers to run any time; raise it if you'd rather only be asked once your count builds back up. |
+| `CHECK_EVERY_MS` | `60000` | How often it re-checks your post count while you're on your profile. |
+| `AUTO_CONFIRM` | `false` | If `true`, skips the confirmation dialog entirely. Off by default on purpose. |
+| `DELETE_DELAY_MIN_MS` / `DELETE_DELAY_MAX_MS` | `1500` / `3000` | Randomized delay range between delete calls. |
+| `SCROLL_DELAY_MS` | `1500` | Wait after each scroll for new tweets to load. |
+| `MAX_IDLE_SCROLLS` | `12` | Stop the current batch after this many scrolls with no new tweets. |
+| `ONLY_HANDLES` | `[]` | Restrict the script to specific handles; empty allows any profile you open. |
 
-## 6. About `THRESHOLD`
+## Rate limits
 
-Near the top of the script there's a settings block with a `THRESHOLD` constant:
+X enforces deletion limits server-side, per account — they can't be bypassed by any client-side trick. When the limit is hit, the script reads X's `x-rate-limit-reset` header and waits until the window resets, then resumes automatically. If it gets rate-limited three times in a row, it treats that as a longer account-level cooldown and backs off harder instead of retrying every 15 minutes. Just leave the tab open.
 
-```js
-const THRESHOLD = 0;  // trigger once your tweet count reaches this
-```
+## Changes in this fork
 
-This controls the minimum post count that triggers the confirmation prompt. Some things to consider when picking your own value:
+- Fixed a bug where the confirmation dialog kept reappearing mid-run: the post count changes *while* deleting, so every periodic check saw a "new" count and re-prompted. It now tracks whether a run is already active and skips re-prompting.
+- Once you confirm for an account, it now auto-continues batch after batch on its own (previously it stopped and waited for the next scheduled check, which could re-trigger the dialog).
+- A deliberate `STOP_DELETE = true` now sticks — it won't silently resume on the next check until you confirm again.
+- Delay range tuned to a middle ground between the original's more conservative pacing and a more aggressive value that was triggering 429s.
 
-- **`0`** (the default) means the script offers to run basically any time it's active on your profile — it triggers on any count. Good if you just want to clean up right now and don't want to think about it.
-- **A higher number** (e.g. `500`, `1000`) means it'll stay quiet until your post count is at or above that — useful if you only want to be prompted once things pile up again in the future, rather than every time you open the script.
-- If you only want to run this once and don't care about future prompts, you can leave it at `0` and just decline (Cancel) the dialog on any future visits, or disable the script in the Tampermonkey dashboard afterward.
+## Notes
 
-To change it, open the script in the Tampermonkey editor (Dashboard → click the script name), edit the number, and save.
+- This relies on X's current internal API and some DOM scraping (reading text labels to detect post counts and reposts). Both can break if X changes something on their end — expect bugs, and don't assume a run did exactly what you expected without checking your profile afterward.
+- This is a quick fix, not a polished, thoroughly tested tool.
+- Likes are out of scope.
 
-## 7. Open X and Go to Your Posts Tab
+## FAQ
 
-1. Navigate to `https://x.com` and go to **your own profile**.
-2. **Important:** make sure you're on the **Posts** tab of your profile (not Replies, Media, or Likes) before doing anything else. The script's initial pass expects to start from Posts.
-3. Open DevTools (F12, or right-click → Inspect) and switch to the **Console** tab to confirm the script loaded — you should see a line like:
-   `[tweetdelete] userscript loaded. Threshold: 0`
+**Is it safe / will I get banned?** It uses X's own internal endpoints with your existing session and respects rate limits, so it behaves like normal usage. It only ever touches your own account. Still, use at your own risk.
 
-## 8. Confirm and Let It Run
+**Do I need the X API or a developer account?** No. This doesn't use the official API at all.
 
-1. While on the **Posts** tab, the script will detect your post count and show a browser confirmation dialog asking whether to start deleting.
-2. Click **OK** to begin, or **Cancel** to skip.
-3. Once confirmed, a small toast notification appears in the bottom-right corner showing live progress, and it will keep going batch by batch without asking again until it's done with your Posts.
+**Can it delete my entire history, including old tweets that don't show up anymore?** No — it only acts on what X renders into your profile timeline as you scroll. There's no archive-import mode in this fork.
 
-## 9. Then Go to Replies
+## Disclaimer
 
-Once the Posts pass finishes (you'll see a "Done" message logged in the console), navigate to the **Replies** tab of your profile. The script will pick up there the same way — detect the content, prompt once, and continue automatically.
-
-## Stopping It Manually
-
-To stop a run in progress, open the Console and type:
-
-```js
-STOP_DELETE = true
-```
-
-then press Enter. This halts the current batch and prevents it from auto-resuming on the next check — you'll need to confirm again if you want to restart it.
+For managing your own account only. Use at your own risk; the author is not responsible for data loss.
