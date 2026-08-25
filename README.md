@@ -4,6 +4,10 @@ This guide walks you through installing and setting up the `tweetdelete.user.js`
 
 > **⚠️ Set X's display language to English first.** The script reads your post count directly from the page text (e.g. `"733 posts"`), and while it recognizes a few locale variants, it's only reliably tested against English. Go to **X → Settings → Accessibility, display, and languages → Languages → Display language** and set it to **English** before continuing, otherwise the script may fail to detect your post count.
 
+> **⚠️ Keep the tab open and in the foreground.** The script scrolls the page and reads tweets out of the live DOM to work — most browsers throttle or unload background tabs, and X itself stops rendering new tweets into a tab that isn't visible. If you switch away or minimize the window mid-run, it'll typically just sit there waiting once the current batch's tweets run out, rather than actually erroring out — it won't stop on its own, and it'll pick back up once you bring the tab back to the front. It won't stop unless you either run `STOP_DELETE = true` in the console yourself or close the tab.
+
+> **⚠️ This is a quick, hacky fix, not a polished tool.** It leans on X's undocumented internal API and some fragile DOM scraping (reading text labels to guess the post count, detecting reposts by a UI label, etc.), all of which can break the moment X changes something on their end. Expect bugs — things like stalling on legitimate tweets, mis-detecting a repost, or the count-reading regex missing an edge case are all realistic. Keep an eye on the console and the toast messages while it runs, and don't assume it did exactly what you expected without checking your profile afterward.
+
 ## 1. Install [Tampermonkey](https://www.tampermonkey.net/)
 
 Tampermonkey is a browser extension that runs userscripts on pages you visit.
