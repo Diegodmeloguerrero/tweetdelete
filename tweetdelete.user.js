@@ -262,6 +262,9 @@
             `(id ${id}) — totals: deleted ${stats.deleted}, unretweeted ${stats.unretweeted}, ` +
             `gone ${stats.gone}, failed ${stats.failed}`
           );
+          // NEW: also refresh the on-screen toast after every single action,
+          // instead of only once per scroll batch.
+          toast(`Deleted ${stats.deleted}, unretweeted ${stats.unretweeted}…`, 3000);
 
           article.closest('div[data-testid="cellInnerDiv"]')?.remove();
           const delay = DELETE_DELAY_MIN_MS + Math.random() * (DELETE_DELAY_MAX_MS - DELETE_DELAY_MIN_MS);
@@ -270,7 +273,6 @@
 
         if (acted) {
           idleScrolls = 0;
-          toast(`Deleted ${stats.deleted}, unretweeted ${stats.unretweeted}…`, 3000);
         } else if (document.hidden) {
           // Tab is backgrounded — X's virtualized list stops rendering new
           // tweets while not visible, so "no new tweets found" here doesn't
