@@ -61,8 +61,8 @@
   const THRESHOLD = 0;        // trigger once your tweet count reaches this
   const CHECK_EVERY_MS = 60000;  // how often to re-check the count while on your profile
   const AUTO_CONFIRM = false;    // false: always ask before deleting (recommended)
-  const DELETE_DELAY_MIN_MS = 1500;  // minimum wait between delete calls (ms)
-  const DELETE_DELAY_MAX_MS = 3000;  // maximum wait between delete calls (ms) — randomized to vary pacing between calls
+  const DELETE_DELAY_MIN_MS = 1200;  // minimum wait between delete calls (ms)
+  const DELETE_DELAY_MAX_MS = 5500;  // maximum wait between delete calls (ms) — wider spread so the pacing looks less uniform/scripted
   const SCROLL_DELAY_MS = 1500;  // wait after each scroll for tweets to load (ms)
   const MAX_IDLE_SCROLLS = 12;   // stop after this many scrolls with no new tweets
   // Only act on these accounts (lowercase handles). Leave empty to allow any
