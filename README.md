@@ -42,7 +42,7 @@ All options live at the top of `tweetdelete.user.js`:
 | `THRESHOLD` | `0` | Minimum post count that triggers the prompt. `0` offers to run any time; raise it if you'd rather only be asked once your count builds back up. |
 | `CHECK_EVERY_MS` | `60000` | How often it re-checks your post count while you're on your profile. |
 | `AUTO_CONFIRM` | `false` | If `true`, skips the confirmation dialog entirely. Off by default on purpose. |
-| `DELETE_DELAY_MIN_MS` / `DELETE_DELAY_MAX_MS` | `1500` / `3000` | Randomized delay range between delete calls. |
+| `DELETE_DELAY_MIN_MS` / `DELETE_DELAY_MAX_MS` | `1200` / `5500` | Randomized delay range between delete calls. Wider range = less uniform pacing. |
 | `SCROLL_DELAY_MS` | `1500` | Wait after each scroll for new tweets to load. |
 | `MAX_IDLE_SCROLLS` | `12` | Stop the current batch after this many scrolls with no new tweets. |
 | `ONLY_HANDLES` | `[]` | Restrict the script to specific handles; empty allows any profile you open. |
